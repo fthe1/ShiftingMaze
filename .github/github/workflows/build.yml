@@ -1,0 +1,52 @@
+
+name: Build MazeAdMob APK
+
+on:
+  workflow_dispatch
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Prepare Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Extract Android project
+        run: |
+          unzip -o MazeAdMob-1.zip -d extracted
+          find extracted -name settings.gradle.kts -print
+
+      - name: Build APK
+        run: |
+          PROJECT_DIR="$(dirname "$(find extracted -name settings.gradle.kts -print -quit)")"
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "Could not find Android project settings.gradle.kts"
+            exit 1
+          fi
+          cd "$PROJECT_DIR"
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug
+          else
+            echo "Gradle wrapper is missing"
+            exit 1
+          fi
+
+      - name: Save APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MazeAdMob-APK
+          path: extracted/**/build/outputs/apk/**/*.apk
